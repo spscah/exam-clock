@@ -1,0 +1,197 @@
+<style>
+
+.gp {
+
+  vertical-align: text-top;
+
+}
+
+.today {
+
+                font-style: italic;
+
+}
+
+</style>
+
+ 
+
+<h1>Doomsday Clock, 2025 </h1>
+
+<table>
+
+<tr>
+
+<th rowspan=3 class="gp">7517
+
+<th>Paper 1
+
+<td>
+
+<div id="a1" class="day" ></div>
+
+</tr>
+
+<tr>
+
+<th>Paper 2
+
+<td>
+
+<div id="a2" class="day" ></div>
+
+</tr>
+
+<tr>
+
+<th>NEA
+
+<td>
+
+<div id="a3" class="day" ></div>
+
+</tr>
+
+<tr>
+
+<th rowspan=2 class="gp">1CP2
+
+<th>Paper 1
+
+<td>
+
+<div id="gcse1" class="day" ></div>
+
+</tr>
+
+<tr>
+
+<th>Paper 2
+
+<td>
+
+<div id="gcse2" class="day" ></div>
+
+</tr>
+
+<tr>
+
+<th rowspan=1 class="gp">FM
+
+<th>Y544
+
+<td>
+
+<div id="dm" class="day" ></div>
+
+<tr>
+
+<th rowspan=1 class="gp">SM
+
+<th>Y240/2
+
+<td>
+
+<div id="smech" class="day" ></div>
+
+</tr>
+
+ 
+
+</tr>
+
+ 
+
+</table>
+
+ 
+
+<p><div id="today" class="today"></div></p>
+
+ 
+
+<script type="text/javascript">
+
+function futurecount(m, d) {
+
+                var now = new Date();
+
+                var future = new Date(now.getFullYear(), m-1, d);
+
+                var diff = future - now ;
+
+                var oneDay = 1000 * 60 * 60 * 24;
+
+                var day = Math.ceil(diff / oneDay);
+
+                return day;
+
+}
+
+ 
+
+function showTime(div, m, d){
+
+ 
+
+    document.getElementById(div).innerText = futurecount(m,d);
+
+   
+
+}
+
+ 
+
+function showday() {
+
+                const weekday = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+ 
+
+                const d = new Date();
+
+                let day = weekday[d.getDay()];
+
+    document.getElementById('today').innerText = day;
+
+}
+
+ 
+
+ 
+
+function prime() {
+
+                showTime('a1',6,11);
+
+                showTime('a2',6,18);
+
+                showTime('a3',3,28);
+
+ 
+
+                showTime('gcse1',5,12);
+
+                showTime('gcse2',5,20);
+
+ 
+
+                showTime('dm',6,18);
+
+                showTime('smech',6,12);
+
+ 
+
+                showday();
+
+ 
+
+}
+
+ 
+
+window.onload = prime;
+
+ 
+
+</script>
