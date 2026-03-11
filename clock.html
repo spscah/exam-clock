@@ -1,189 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Doomsday Clock, 2026</title>
+<script src="exams.js"></script>
 <style>
+  body { font-family: sans-serif; padding: 1em; }
 
-.gp {
+  table { border-collapse: collapse; margin-bottom: 1em; }
+  th, td { padding: 0.3em 0.7em; text-align: left; border: 1px solid #ccc; }
+  th.subject { vertical-align: middle; font-size: 1.1em; }
 
-  vertical-align: text-top;
+  .today { font-style: italic; margin-bottom: 1em; }
 
-}
+  .days-value { font-weight: bold; font-style: italic; }
+  .days-past  { color: #999; }
 
-.today {
+  /* extras management */
+  .delete-btn {
+    background: none; border: none; color: #c00;
+    cursor: pointer; font-size: 0.9em; padding: 0 0.3em;
+  }
+  .delete-btn:hover { color: #f00; }
 
-                font-style: italic;
+  details { margin-top: 1em; }
+  summary { cursor: pointer; font-weight: bold; }
 
-}
+  #add-form { margin-top: 0.6em; display: grid; grid-template-columns: auto 1fr; gap: 0.4em 0.6em; align-items: center; max-width: 360px; }
+  #add-form label { text-align: right; }
+  #add-form input { padding: 0.2em 0.4em; width: 100%; box-sizing: border-box; }
+  #add-form button { grid-column: 2; margin-top: 0.3em; padding: 0.3em 0.8em; cursor: pointer; }
 
+  .error { color: #c00; font-size: 0.85em; grid-column: 1 / -1; }
 </style>
+</head>
+<body>
 
- 
+<h1>Doomsday Clock, 2026</h1>
 
-<h1>Doomsday Clock, 2026 </h1>
+<p class="today" id="today"></p>
 
-<table>
-
-<tr>
-
-<th rowspan=3 class="gp">7517
-
-<th>Paper 1
-
-<td>
-
-<div id="a1" class="day" ></div>
-
-</tr>
-
-<tr>
-
-<th>Paper 2
-
-<td>
-
-<div id="a2" class="day" ></div>
-
-</tr>
-
-<tr>
-
-<th>NEA
-
-<td>
-
-<div id="a3" class="day" ></div>
-
-</tr>
-
-<tr>
-
-<th rowspan=2 class="gp">1CP2
-
-<th>Paper 1
-
-<td>
-
-<div id="gcse1" class="day" ></div>
-
-</tr>
-
-<tr>
-
-<th>Paper 2
-
-<td>
-
-<div id="gcse2" class="day" ></div>
-
-</tr>
-
-<tr>
-
-<th rowspan=1 class="gp">FM
-
-<th>Y544
-
-<td>
-
-<div id="dm" class="day" ></div>
-
-<tr>
-
-<th rowspan=1 class="gp">SM
-
-<th>Y240/2
-
-<td>
-
-<div id="smech" class="day" ></div>
-
-</tr>
-
- 
-
-</tr>
-
- 
-
+<table id="exam-table">
+  <thead>
+    <tr><th>Subject</th><th>Paper</th><th>Days</th><th></th></tr>
+  </thead>
+  <tbody id="exam-body"></tbody>
 </table>
 
- 
+<details id="add-panel">
+  <summary>➕ Add extra exam</summary>
+  <form id="add-form" onsubmit="handleAdd(event)">
+    <label for="f-subject">Subject</label>
+    <input id="f-subject" type="text" placeholder="e.g. CS" required>
 
-<p><div id="today" class="today"></div></p>
+    <label for="f-paper">Paper</label>
+    <input id="f-paper" type="text" placeholder="e.g. Paper 1" required>
 
- 
+    <label for="f-month">Month (1–12)</label>
+    <input id="f-month" type="number" min="1" max="12" required>
 
-<script type="text/javascript">
+    <label for="f-day">Day</label>
+    <input id="f-day" type="number" min="1" max="31" required>
 
-function futurecount(m, d) {
+    <span id="form-error" class="error"></span>
+    <button type="submit">Add</button>
+  </form>
+</details>
 
-                var now = new Date();
+<script>
+const STORAGE_KEY = 'extraExams';
+const ONE_DAY_MS  = 1000 * 60 * 60 * 24;
 
-                var future = new Date(now.getFullYear(), m-1, d);
+// ── Storage helpers ───────────────────────────────────────────────────────────
 
-                var diff = future - now ;
-
-                var oneDay = 1000 * 60 * 60 * 24;
-
-                var day = Math.ceil(diff / oneDay);
-
-                return day;
-
+function loadExtras() {
+  // Try localStorage first (works reliably on https://)
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  // Fall back to URL hash (survives F5 on file://)
+  try {
+    const hash = window.location.hash.slice(1);
+    if (hash) return JSON.parse(decodeURIComponent(hash));
+  } catch {}
+  return [];
 }
 
- 
-
-function showTime(div, m, d){
-
- 
-
-    document.getElementById(div).innerText = futurecount(m,d);
-
-   
-
+function saveExtras(extras) {
+  const json = JSON.stringify(extras);
+  try { localStorage.setItem(STORAGE_KEY, json); } catch {}
+  // Mirror to URL hash so file:// reloads survive
+  history.replaceState(null, '', '#' + encodeURIComponent(json));
 }
 
- 
+// ── Countdown logic ───────────────────────────────────────────────────────────
 
-function showday() {
-
-                const weekday = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-
- 
-
-                const d = new Date();
-
-                let day = weekday[d.getDay()];
-
-    document.getElementById('today').innerText = day;
-
+function daysUntil(month, day) {
+  const now    = new Date();
+  const target = new Date(now.getFullYear(), month - 1, day);
+  return Math.ceil((target - now) / ONE_DAY_MS);
 }
 
- 
+// ── Rendering ─────────────────────────────────────────────────────────────────
 
- 
+function renderTable(baseExams, extras) {
+  const all = [
+    ...baseExams.map(e => ({ ...e, source: 'base' })),
+    ...extras.map(e   => ({ ...e, source: 'extra' }))
+  ];
 
-function prime() {
+  // Sort by subject, then paper
+  all.sort((a, b) =>
+    a.subject.localeCompare(b.subject) || a.paper.localeCompare(b.paper)
+  );
 
-                showTime('a1',6,10);
-                showTime('a2',6,17);
-                showTime('a3',3,26);
+  const tbody = document.getElementById('exam-body');
+  tbody.innerHTML = '';
 
-                showTime('gcse1',5,13);
-                showTime('gcse2',5,19);
+  // Group by subject for rowspan
+  const groups = [];
+  for (const exam of all) {
+    const last = groups[groups.length - 1];
+    if (last && last.subject === exam.subject) {
+      last.rows.push(exam);
+    } else {
+      groups.push({ subject: exam.subject, rows: [exam] });
+    }
+  }
 
-                showTime('dm',6,16);
-                showTime('smech',6,18);
+  for (const group of groups) {
+    group.rows.forEach((exam, i) => {
+      const days = daysUntil(exam.month, exam.day);
+      const tr   = document.createElement('tr');
 
- 
+      if (i === 0) {
+        const th = document.createElement('th');
+        th.className  = 'subject';
+        th.rowSpan    = group.rows.length;
+        th.textContent = exam.subject;
+        tr.appendChild(th);
+      }
 
-                showday();
+      const tdPaper = document.createElement('td');
+      tdPaper.textContent = exam.paper;
+      tr.appendChild(tdPaper);
 
- 
+      const tdDays = document.createElement('td');
+      tdDays.className = 'days-value' + (days < 0 ? ' days-past' : '');
+      tdDays.textContent = days < 0 ? `-${Math.abs(days)}` : `${days}`;
+      tr.appendChild(tdDays);
 
+      const tdAction = document.createElement('td');
+      if (exam.source === 'extra') {
+        const btn = document.createElement('button');
+        btn.className   = 'delete-btn';
+        btn.textContent = '✕';
+        btn.title       = 'Remove this entry';
+        btn.onclick     = () => deleteExtra(exam);
+        tdAction.appendChild(btn);
+      }
+      tr.appendChild(tdAction);
+
+      tbody.appendChild(tr);
+    });
+  }
 }
 
- 
+function renderDay() {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('today').textContent = days[new Date().getDay()];
+}
+
+// ── Extras CRUD ───────────────────────────────────────────────────────────────
+
+function deleteExtra(exam) {
+  const extras = loadExtras().filter(
+    e => !(e.subject === exam.subject && e.paper === exam.paper &&
+           e.month === exam.month && e.day === exam.day)
+  );
+  saveExtras(extras);
+  renderTable(window._baseExams, extras);
+}
+
+function handleAdd(event) {
+  event.preventDefault();
+  const subject = document.getElementById('f-subject').value.trim();
+  const paper   = document.getElementById('f-paper').value.trim();
+  const month   = parseInt(document.getElementById('f-month').value, 10);
+  const day     = parseInt(document.getElementById('f-day').value, 10);
+  const errEl   = document.getElementById('form-error');
+
+  errEl.textContent = '';
+
+  const extras = loadExtras();
+  if (extras.some(e => e.subject === subject && e.paper === paper)) {
+    errEl.textContent = 'An entry with this subject and paper already exists.';
+    return;
+  }
+
+  extras.push({ subject, paper, month, day });
+  saveExtras(extras);
+  renderTable(window._baseExams, extras);
+
+  event.target.reset();
+  document.getElementById('add-panel').open = false;
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+
+async function prime() {
+  renderDay();
+
+  const baseExams = window.EXAMS || [];
+  window._baseExams = baseExams;
+  renderTable(baseExams, loadExtras());
+}
 
 window.onload = prime;
-
- 
-
 </script>
+
+</body>
+</html>
