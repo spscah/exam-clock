@@ -14,7 +14,12 @@
   .today { font-style: italic; margin-bottom: 1em; }
 
   .days-value { font-weight: bold; font-style: italic; }
-  .days-past  { color: #999; }
+  .days-past    { background: #e0e0e0; color: #666; }
+  .days-urgent  { background: #cc0000; color: #fff; }
+  .days-warning { background: #e07000; color: #fff; }
+  .days-soon    { background: #5a9e00; color: #fff; }
+  .days-ok      { background: #2e7d32; color: #fff; }
+  .days-fine    { background: #c8e6c9; color: #1b5e20; }
 
   /* extras management */
   .delete-btn {
@@ -147,7 +152,13 @@ function renderTable(baseExams, extras) {
       tr.appendChild(tdPaper);
 
       const tdDays = document.createElement('td');
-      tdDays.className = 'days-value' + (days < 0 ? ' days-past' : '');
+      const heatClass = days < 0  ? 'days-past'
+                      : days < 7  ? 'days-urgent'
+                      : days < 14 ? 'days-warning'
+                      : days < 28 ? 'days-soon'
+                      : days < 56 ? 'days-ok'
+                      :             'days-fine';
+      tdDays.className = 'days-value ' + heatClass;
       tdDays.textContent = days < 0 ? `-${Math.abs(days)}` : `${days}`;
       tr.appendChild(tdDays);
 
