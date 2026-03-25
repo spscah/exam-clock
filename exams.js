@@ -1,7 +1,7 @@
 window.EXAMS = [
   { subject: "7517", paper: "Paper 1", month: 6, day: 10 },
   { subject: "7517", paper: "Paper 2", month: 6, day: 17 },
-  { subject: "7517", paper: "NEA",     month: 3, day: 26 },
+  { subject: "7517", paper: "NEA",     month: 3, day: 27 },
   { subject: "1CP2", paper: "Paper 1", month: 5, day: 13 },
   { subject: "1CP2", paper: "Paper 2", month: 5, day: 19 },
   { subject: "FM",   paper: "Y544",    month: 6, day: 16 },
