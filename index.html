@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doomsday Clock, 2026</title>
+<script src="exams.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    padding: 1.5em; background: #faf8f5; color: #2d2926; line-height: 1.5;
+  }
+  h1 { font-size: 1.4em; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 0.15em; }
+  .today { margin: 0 0 1.2em; color: #7d756c; font-size: 0.92em; }
+  table { border-collapse: collapse; margin-bottom: 1.25em; }
+  th, td { padding: 0.45em 0.8em; text-align: left; border-bottom: 1px solid #e2dcd5; }
+  thead th {
+    font-size: 0.75em; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #9a928a; border-bottom: 2px solid #d5cec6; padding-bottom: 0.6em;
+  }
+  th.subject { vertical-align: middle; font-size: 1.05em; font-weight: 700; border-right: 1px solid #e2dcd5; }
+  tbody tr { transition: background 0.15s; }
+  tbody tr:hover { background: rgba(45, 41, 38, 0.03); }
+  .days-value { font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; min-width: 3em; }
+  .days-past    { background: #d8d2cb; color: #7d756c; }
+  .days-urgent  { background: #b33d32; color: #fff; }
+  .days-warning { background: #b86e28; color: #fff; }
+  .days-soon    { background: #647d2b; color: #fff; }
+  .days-ok      { background: #2f7f4e; color: #fff; }
+  .days-fine    { background: #d8e5d0; color: #35592d; }
+  .del-btn {
+    background: none; border: none; color: #b5ada4; cursor: pointer;
+    font-size: 0.85em; padding: 0.2em 0.4em; border-radius: 3px;
+    transition: color 0.15s, background-color 0.15s;
+  }
+  .del-btn:hover { color: #b33d32; background: rgba(179, 61, 50, 0.08); }
+  .del-btn:focus-visible { outline: 2px solid #b33d32; outline-offset: 1px; }
+  details { margin-top: 1.25em; }
+  summary { cursor: pointer; font-weight: 600; font-size: 0.9em; color: #5a534c; transition: color 0.15s; }
+  summary:hover { color: #2d2926; }
+  #add-form {
+    margin-top: 0.75em; display: grid; grid-template-columns: auto 1fr;
+    gap: 0.5em 0.75em; align-items: center; max-width: 360px;
+  }
+  #add-form label { text-align: right; font-size: 0.88em; color: #5a534c; }
+  #add-form input {
+    padding: 0.35em 0.5em; width: 100%; border: 1px solid #d5cec6; border-radius: 4px;
+    font: inherit; font-size: 0.92em; background: #fefdfb; color: #2d2926;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  #add-form input:focus {
+    outline: none; border-color: #9a928a;
+    box-shadow: 0 0 0 2.5px rgba(154, 146, 138, 0.18);
+  }
+  #add-form button {
+    grid-column: 2; margin-top: 0.4em; padding: 0.4em 1em; cursor: pointer;
+    background: #2d2926; color: #faf8f5; border: none; border-radius: 4px;
+    font: inherit; font-size: 0.88em; font-weight: 600; transition: background 0.15s;
+  }
+  #add-form button:hover { background: #46403a; }
+  #add-form button:active { background: #1a1715; }
+  #add-form button:focus-visible { outline: 2px solid #2d2926; outline-offset: 2px; }
+  .error { color: #b33d32; font-size: 0.85em; grid-column: 1 / -1; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0s !important; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Doomsday Clock, 2026</h1>
+<p class="today" id="today"></p>
+
+<table>
+  <thead><tr><th>Subject</th><th>Paper</th><th>Days</th><th></th></tr></thead>
+  <tbody id="exam-body"></tbody>
+</table>
+
+<details id="add-panel">
+  <summary>➕ Add extra exam</summary>
+  <form id="add-form">
+    <label for="f-subject">Subject</label>
+    <input id="f-subject" required placeholder="e.g. CS">
+    <label for="f-paper">Paper</label>
+    <input id="f-paper" required placeholder="e.g. Paper 1">
+    <label for="f-month">Month (1–12)</label>
+    <input id="f-month" type="number" min="1" max="12" required>
+    <label for="f-day">Day</label>
+    <input id="f-day" type="number" min="1" max="31" required>
+    <span id="form-error" class="error"></span>
+    <button type="submit">Add</button>
+  </form>
+</details>
+
+<script>
+const STORE_KEY = 'extraExams';
+const DAY_MS = 864e5;
+const BASE = window.EXAMS || [];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+
+function loadExtras() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch {}
+  try { return JSON.parse(decodeURIComponent(location.hash.slice(1))) || []; } catch {}
+  return [];
+}
+
+function saveExtras(extras) {
+  const json = JSON.stringify(extras);
+  try { localStorage.setItem(STORE_KEY, json); } catch {}
+  history.replaceState(null, '', '#' + encodeURIComponent(json));
+}
+
+function daysUntil(month, day) {
+  const now = new Date();
+  return Math.ceil((new Date(now.getFullYear(), month - 1, day) - now) / DAY_MS);
+}
+
+function heatClass(d) {
+  if (d < 0)  return 'days-past';
+  if (d < 7)  return 'days-urgent';
+  if (d < 14) return 'days-warning';
+  if (d < 28) return 'days-soon';
+  if (d < 56) return 'days-ok';
+  return 'days-fine';
+}
+
+function render() {
+  const extras = loadExtras();
+  const all = [
+    ...BASE.map(e => ({ ...e, extra: false })),
+    ...extras.map(e => ({ ...e, extra: true })),
+  ].sort((a, b) => a.subject.localeCompare(b.subject) || a.paper.localeCompare(b.paper));
+
+  const groups = [];
+  for (const exam of all) {
+    const last = groups.at(-1);
+    if (last?.subject === exam.subject) last.rows.push(exam);
+    else groups.push({ subject: exam.subject, rows: [exam] });
+  }
+
+  $('exam-body').innerHTML = groups.flatMap(g =>
+    g.rows.map((e, i) => {
+      const d = daysUntil(e.month, e.day);
+      const th = i === 0 ? `<th class="subject" rowspan="${g.rows.length}">${esc(g.subject)}</th>` : '';
+      const del = e.extra
+        ? `<button class="del-btn" data-s="${esc(e.subject)}" data-p="${esc(e.paper)}" data-m="${e.month}" data-d="${e.day}">✕</button>` : '';
+      return `<tr>${th}<td>${esc(e.paper)}</td><td class="days-value ${heatClass(d)}">${d}</td><td>${del}</td></tr>`;
+    })
+  ).join('');
+}
+
+$('exam-body').addEventListener('click', evt => {
+  const btn = evt.target.closest('.del-btn');
+  if (!btn) return;
+  const { s, p, m, d: day } = btn.dataset;
+  saveExtras(loadExtras().filter(e =>
+    !(e.subject === s && e.paper === p && e.month === +m && e.day === +day)
+  ));
+  render();
+});
+
+$('add-form').addEventListener('submit', evt => {
+  evt.preventDefault();
+  const subject = $('f-subject').value.trim();
+  const paper = $('f-paper').value.trim();
+  const month = +$('f-month').value;
+  const day = +$('f-day').value;
+  const err = $('form-error');
+  err.textContent = '';
+
+  const extras = loadExtras();
+  if (extras.some(e => e.subject === subject && e.paper === paper)) {
+    err.textContent = 'An entry with this subject and paper already exists.';
+    return;
+  }
+
+  extras.push({ subject, paper, month, day });
+  saveExtras(extras);
+  render();
+  evt.target.reset();
+  $('add-panel').open = false;
+});
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+$('today').textContent = DAYS[new Date().getDay()];
+render();
+</script>
+
+</body>
+</html>
